@@ -1,1 +1,4 @@
 .idea
+pkg/
+api.key
+*-handin.tar.gz
