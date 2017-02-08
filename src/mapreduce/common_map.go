@@ -6,6 +6,7 @@ import (
 	"os"
 	"log"
 	"encoding/json"
+	"fmt"
 )
 
 // doMap manages one map task: it reads one of the input files
@@ -69,13 +70,20 @@ func doMap(
 
 	// finally, we need to split all key-values into different reduce files,
 	// using json to store each file.
-
+	interkv := make([]map[string][]string, nReduce)
 
 	for _, kv := range mapOut {
+		pos := ihash(kv.Key) % nReduce
+		_, ok := interkv[pos][kv.Key]
 
+		if !ok {
+			interkv[pos][kv.Key] = kv.Value
+		} else {
+			append(interkv[pos][kv.Key], kv.Value)
+		}
 	}
 
-
+	storeInto(&interkv, mapTaskNumber, nReduce)
 
 }
 
@@ -83,4 +91,28 @@ func ihash(s string) int {
 	h := fnv.New32a()
 	h.Write([]byte(s))
 	return int(h.Sum32() & 0x7fffffff)
+}
+
+// inner function to store all kv into different files.
+// since it's interfile, a single k-v is wrapped into k-[v].
+// It makes it more convenient to deal with k-[v1,v2,...]
+func storeInto(interkv *[]map[string][]string,
+				jobName string, mapTaskNumber int) {
+	for which, kv := range *interkv {
+		filename := reduceName(jobName, mapTaskNumber, which)
+		if exists(filename) {
+			// it means other mapper has created this file
+			file, err = os.Open()
+
+		} else {
+			file, err := os.Create(filename)
+			defer file.Close()
+			if err != nil {
+				log.Fatal(fmt.Sprintf("mapper %v open file error: %v.", mapTaskNumber, err))
+			} else {
+				enc := json.NewEncoder(file)
+				enc.Encode(kv)
+			}
+		}
+	}
 }
