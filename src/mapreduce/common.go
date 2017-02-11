@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"os"
+	"log"
 )
 
 // Debugging enabled?
@@ -47,4 +48,17 @@ func mergeName(jobName string, reduceTask int) string {
 func exists(file string) bool {
 	_, err := os.Stat(file)
 	return os.IsNotExist(err)
+}
+
+// A error client to hold and deal with all error.
+func ErrorClient(err error) bool{
+	return Error(err)
+}
+
+func Error(err error) bool{
+	if err != nil {
+		log.Fatal(err)
+		return false
+	}
+	return true
 }
