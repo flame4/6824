@@ -8,7 +8,7 @@ import (
 )
 
 // Debugging enabled?
-const debugEnabled = true
+const debugEnabled = false
 
 // debug() will only print if debugEnabled is true
 func debug(format string, a ...interface{}) (n int, err error) {
@@ -47,7 +47,7 @@ func mergeName(jobName string, reduceTask int) string {
 // exists indicate whether file is exist or not.
 func exists(file string) bool {
 	_, err := os.Stat(file)
-	return os.IsNotExist(err)
+	return os.IsExist(err)
 }
 
 // A error client to hold and deal with all error.

@@ -71,6 +71,9 @@ func doMap(
 	// using json to store each file.
 	//interkv := make([]map[string][]string, nReduce)
 	interkv := make([]map[string]string, nReduce)
+	for i:=0; i<nReduce; i++ {
+		interkv[i] = make(map[string]string)
+	}
 
 	for _, kv := range mapOut {
 		pos := ihash(kv.Key) % nReduce
@@ -105,7 +108,6 @@ func storeInto(interkv *[]map[string]string,
 		encoder := json.NewEncoder(file)
 		encoder.Encode(interkv)
 	}
-
 	for which, kv := range *interkv {
 		filename := reduceName(jobName, mapTaskNumber, which)
 		if exists(filename) {
