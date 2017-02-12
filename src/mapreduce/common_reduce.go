@@ -48,8 +48,8 @@ func doReduce(
 	// }
 	// file.Close()
 	//
-	var final map[string][]string
-	var tmp map[string]string
+	var final,tmp map[string][]string
+
 	for i:=0; i<nMap; i++ {
 		filename := reduceName(jobName, i, reduceTaskNumber)
 		file, err := os.Open(filename); ErrorClient(err); defer file.Close()
@@ -57,7 +57,7 @@ func doReduce(
 		for decoder.Decode(&tmp) != nil {
 			for k,v := range tmp {
 				if _, ok := final[k]; !ok {
-					final[k] = []string[v]
+					final[k] = []string{v}
 				} else {
 					append(final[k], v)
 				}
@@ -65,5 +65,9 @@ func doReduce(
 		}
 	}
 
-
+	out, err := os.Create(outFile); ErrorClient(err); defer out.Close()
+	encoder := json.NewEncoder(out)
+	for key := range final {
+		encoder.Encode(KeyValue{key, reduceF(key, final[key])})
+	}
 }

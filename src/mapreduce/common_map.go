@@ -6,8 +6,6 @@ import (
 	"os"
 	"log"
 	"encoding/json"
-	"fmt"
-	"syscall"
 )
 
 // doMap manages one map task: it reads one of the input files
@@ -63,11 +61,11 @@ func doMap(
 	// firstly, i need get the whole content and standardize them.
 	content, err := ioutil.ReadFile(inFile)
 	if err != nil {
-		log.Fatal("map reading file error: " + err)
+		log.Fatal("map reading file error: " + err.Error())
 	}
 
 	// then, use mapF given to get all key-value pairs.
-	mapOut := mapF(inFile, content)
+	mapOut := mapF(inFile, string(content))
 
 	// finally, we need to split all key-values into different reduce files,
 	// using json to store each file.
@@ -87,7 +85,7 @@ func doMap(
 		}
 	}
 
-	storeInto(&interkv, mapTaskNumber, nReduce)
+	storeInto(&interkv, jobName, mapTaskNumber)
 
 }
 
@@ -100,7 +98,7 @@ func ihash(s string) int {
 // inner function to store all kv into different files.
 // since it's interfile, a single k-v is wrapped into k-[v].
 // It makes it more convenient to deal with k-[v1,v2,...]
-func storeInto(interkv *[]map[string][]string,
+func storeInto(interkv *[]map[string]string,
 				jobName string, mapTaskNumber int) {
 	writein := func(filename string, /*interkv *map[string][]string,*/ interkv *map[string]string){
 		file, err := os.Create(filename); ErrorClient(err); defer file.Close()
