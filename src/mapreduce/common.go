@@ -3,6 +3,8 @@ package mapreduce
 import (
 	"fmt"
 	"strconv"
+	"os"
+	"log"
 )
 
 // Debugging enabled?
@@ -40,4 +42,23 @@ func reduceName(jobName string, mapTask int, reduceTask int) string {
 // mergeName constructs the name of the output file of reduce task <reduceTask>
 func mergeName(jobName string, reduceTask int) string {
 	return "mrtmp." + jobName + "-res-" + strconv.Itoa(reduceTask)
+}
+
+// exists indicate whether file is exist or not.
+func exists(file string) bool {
+	_, err := os.Stat(file)
+	return os.IsExist(err)
+}
+
+// A error client to hold and deal with all error.
+func ErrorClient(err error) bool{
+	return Error(err)
+}
+
+func Error(err error) bool{
+	if err != nil {
+		log.Fatal(err)
+		return false
+	}
+	return true
 }
