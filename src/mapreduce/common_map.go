@@ -69,10 +69,10 @@ func doMap(
 
 	// finally, we need to split all key-values into different reduce files,
 	// using json to store each file.
-	//interkv := make([]map[string][]string, nReduce)
-	interkv := make([]map[string]string, nReduce)
+	interkv := make([]map[string][]string, nReduce)
+	//interkv := make([]map[string]string, nReduce)
 	for i:=0; i<nReduce; i++ {
-		interkv[i] = make(map[string]string)
+		interkv[i] = make(map[string][]string)
 	}
 
 	for _, kv := range mapOut {
@@ -80,11 +80,11 @@ func doMap(
 		_, ok := interkv[pos][kv.Key]
 
 		if !ok {
-			//interkv[pos][kv.Key] = []string{kv.Value}
-			interkv[pos][kv.Key] = kv.Value
+			interkv[pos][kv.Key] = []string{kv.Value}
+			//interkv[pos][kv.Key] = kv.Value
 		} else {
-			//append(interkv[pos][kv.Key], kv.Value)
-			log.Fatal("mapper duplicate key in a file error: " + inFile + " " + kv.Key)
+			interkv[pos][kv.Key] = append(interkv[pos][kv.Key], kv.Value)
+			//log.Fatal("mapper duplicate key in a file error: " + inFile + " " + kv.Key)
 		}
 	}
 
@@ -101,9 +101,9 @@ func ihash(s string) int {
 // inner function to store all kv into different files.
 // since it's interfile, a single k-v is wrapped into k-[v].
 // It makes it more convenient to deal with k-[v1,v2,...]
-func storeInto(interkv *[]map[string]string,
+func storeInto(interkv *[]map[string][]string,
 				jobName string, mapTaskNumber int) {
-	writein := func(filename string, /*interkv *map[string][]string,*/ interkv *map[string]string){
+	writein := func(filename string, interkv *map[string][]string){
 		file, err := os.Create(filename); ErrorClient(err); defer file.Close()
 		encoder := json.NewEncoder(file)
 		encoder.Encode(interkv)
@@ -114,17 +114,17 @@ func storeInto(interkv *[]map[string]string,
 			// it means other mapper has created this file
 			// so we need load it into memory first, then delete the old file and create a new one.
 			//var tmp map[string][]string
-			var tmp map[string]string
+			var tmp map[string][]string
 			content, err := ioutil.ReadFile(filename); ErrorClient(err)
 			err = json.Unmarshal(content, &tmp); ErrorClient(err)
 			for k, v := range tmp {
 				if _, ok := kv[k]; !ok {
 					kv[k] = v
 				} else {
-					//for _, word := range v {
-					//append(kv[k], word)
-					//}
-					log.Fatal("mapper duplicate key in multi file error:" + filename + " " + k)
+					for _, word := range v {
+						kv[k] = append(kv[k], word)
+					}
+					//log.Fatal("mapper duplicate key in multi file error:" + filename + " " + k)
 				}
 			}
 		}

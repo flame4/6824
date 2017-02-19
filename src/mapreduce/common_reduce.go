@@ -49,17 +49,15 @@ func doReduce(
 	// file.Close()
 	//
 	final := make(map[string][]string)
-	var tmp map[string]string
+	var tmp map[string][]string
 	for i:=0; i<nMap; i++ {
 		filename := reduceName(jobName, i, reduceTaskNumber)
 		file, err := os.Open(filename); ErrorClient(err); defer file.Close()
 		decoder := json.NewDecoder(file)
 		for decoder.Decode(&tmp) == nil {
 			for k,v := range tmp {
-				if _, ok := final[k]; !ok {
-					final[k] = []string{v}
-				} else {
-					final[k] = append(final[k], v)
+				for _, word := range v{
+					final[k] = append(final[k], word)
 				}
 			}
 		}
