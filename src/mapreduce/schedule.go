@@ -12,7 +12,7 @@ import "fmt"
 // existing registered workers (if any) and new ones as they register.
 //
 func schedule(jobName string, mapFiles []string, nReduce int, phase jobPhase, registerChan chan string) {
-	var ntasks int
+	var ntasks int  // number of tasks to deal with
 	var n_other int // number of inputs (for reduce) or outputs (for map)
 	switch phase {
 	case mapPhase:
@@ -30,7 +30,7 @@ func schedule(jobName string, mapFiles []string, nReduce int, phase jobPhase, re
 	// Remember that workers may fail, and that any given worker may finish
 	// multiple tasks.
 	//
-	// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
 	//
+
 	fmt.Printf("Schedule: %v phase done\n", phase)
 }
