@@ -40,6 +40,7 @@ func schedule(jobName string, mapFiles []string, nReduce int, phase jobPhase, re
 	for i := 0; i < ntasks; i++ {
 		taskChan <- i
 	}
+	close(taskChan)
 
 	// This channel is used to indicate all tasks is done.
 	doneChan := make(chan bool, 1)
@@ -52,7 +53,10 @@ func schedule(jobName string, mapFiles []string, nReduce int, phase jobPhase, re
 	for {
 		select {
 		case worker := <-registerChan:
-			taskNum := <-taskChan
+			taskNum, ok := <-taskChan
+			if !ok {
+				break
+			}
 			file := ""
 			if phase == mapPhase {
 				file = mapFiles[taskNum]
@@ -60,23 +64,23 @@ func schedule(jobName string, mapFiles []string, nReduce int, phase jobPhase, re
 			args := DoTaskArgs{jobName, file, phase, taskNum, n_other}
 			go func() {
 				var err error
-				call(worker, "Worker.DoTask", args, &err)
+				call(worker, "Worker.DoTask", args, err)
 				if err != nil {
-					fmt.Println("LALALA: func err" + err.Error())
+					//fmt.Println("LALALA: func err" + err.Error())
 					waitListener.Done()
 					// dealing with error
 				} else {
 					// it means a task is done by a worker, so this worker can be reused.
-					fmt.Println("LOLOLO: i have done!")
+					//fmt.Println("LOLOLO: i have done!")
 					waitListener.Done()
 					registerChan <- worker
 				}
 			}()
 		case <-doneChan:
 			// all task is done. Function return.
-			break
+			fmt.Printf("Schedule: %v phase done\n", phase)
+			return
 		}
 	}
 
-	fmt.Printf("Schedule: %v phase done\n", phase)
 }
