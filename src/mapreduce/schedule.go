@@ -15,7 +15,7 @@ import (
 // existing registered workers (if any) and new ones as they register.
 //
 func schedule(jobName string, mapFiles []string, nReduce int, phase jobPhase, registerChan chan string) {
-	var ntasks int
+	var ntasks int  // number of tasks to deal with
 	var n_other int // number of inputs (for reduce) or outputs (for map)
 	switch phase {
 	case mapPhase:
@@ -84,6 +84,5 @@ func schedule(jobName string, mapFiles []string, nReduce int, phase jobPhase, re
 			}()
 		}
 	}
-
 	fmt.Printf("Schedule: %v phase done\n", phase)
 }
