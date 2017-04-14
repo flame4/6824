@@ -61,7 +61,7 @@ import "time"
 
 type reqMsg struct {
 	endname  interface{} // name of sending ClientEnd
-	svcMeth  string      // e.g. "Raft.AppendEntries"
+	svcMeth  string      // e.g. "Raft.AppendEntries", RPC的包类型
 	argsType reflect.Type
 	args     []byte
 	replyCh  chan replyMsg
@@ -110,10 +110,10 @@ func (e *ClientEnd) Call(svcMeth string, args interface{}, reply interface{}) bo
 type Network struct {
 	mu             sync.Mutex
 	reliable       bool
-	longDelays     bool                        // pause a long time on send on disabled connection
-	longReordering bool                        // sometimes delay replies a long time
-	ends           map[interface{}]*ClientEnd  // ends, by name
-	enabled        map[interface{}]bool        // by end name
+	longDelays     bool                        // pause a long time on send on disabled connection, 定义了网络的不可靠性.
+	longReordering bool                        // sometimes delay replies a long time, 定义了网络传输速度慢.
+	ends           map[interface{}]*ClientEnd  // ends, by name, 网络中可以初始化很多的client, 通过channel进行通讯
+	enabled        map[interface{}]bool        // by end name 定义这个client现在是否连接
 	servers        map[interface{}]*Server     // servers, by name
 	connections    map[interface{}]interface{} // endname -> servername
 	endCh          chan reqMsg
@@ -175,6 +175,7 @@ func (rn *Network) ReadEndnameInfo(endname interface{}) (enabled bool,
 	return
 }
 
+// 判断一个client到一个server的通讯是否良好, 后一种情况会在deleteserver函数调用后出现, 还有没有其他的情况?
 func (rn *Network) IsServerDead(endname interface{}, servername interface{}, server *Server) bool {
 	rn.mu.Lock()
 	defer rn.mu.Unlock()
@@ -195,6 +196,7 @@ func (rn *Network) ProcessReq(req reqMsg) {
 			time.Sleep(time.Duration(ms) * time.Millisecond)
 		}
 
+		// 如果网络情况设置不好, 那么有1/10的几率断
 		if reliable == false && (rand.Int()%1000) < 100 {
 			// drop the request, return as if timeout
 			req.replyCh <- replyMsg{false, nil}
@@ -232,6 +234,8 @@ func (rn *Network) ProcessReq(req reqMsg) {
 		// to an Append, but the server persisted the update
 		// into the old Persister. config.go is careful to call
 		// DeleteServer() before superseding the Persister.
+		// 这里大概模拟的是比较极端的情况?  比如服务已经完成, 但是还没有提交结果的时候服务器挂掉了
+		// 这里可以模拟RAFT的安全性问题
 		serverDead = rn.IsServerDead(req.endname, servername, server)
 
 		if replyOK == false || serverDead == true {
@@ -250,6 +254,7 @@ func (rn *Network) ProcessReq(req reqMsg) {
 		}
 	} else {
 		// simulate no reply and eventual timeout.
+		// 这种情况有可能是服务器宕机或者是关机退出了网络.
 		ms := 0
 		if rn.longDelays {
 			// let Raft tests check that leader doesn't send
@@ -330,7 +335,8 @@ func (rn *Network) GetCount(servername interface{}) int {
 // a server is a collection of services, all sharing
 // the same rpc dispatcher. so that e.g. both a Raft
 // and a k/v server can listen to the same rpc endpoint.
-//
+// 一个server可以既提供RAFT协议服务, 又提供k/v服务, 这取决于这个
+// server 在rpc上绑定了多少的服务.
 type Server struct {
 	mu       sync.Mutex
 	services map[string]*Service
@@ -384,6 +390,7 @@ func (rs *Server) GetCount() int {
 
 // an object with methods that can be called via RPC.
 // a single server may have more than one Service.
+// 注意: 一个服务由一组方法构成而不是一个
 type Service struct {
 	name    string
 	rcvr    reflect.Value
@@ -422,6 +429,7 @@ func MakeService(rcvr interface{}) *Service {
 	return svc
 }
 
+// 通过给定service的方法和参数进行通讯
 func (svc *Service) dispatch(methname string, req reqMsg) replyMsg {
 	if method, ok := svc.methods[methname]; ok {
 		// prepare space into which to read the argument.
@@ -438,7 +446,7 @@ func (svc *Service) dispatch(methname string, req reqMsg) replyMsg {
 		replyType = replyType.Elem()
 		replyv := reflect.New(replyType)
 
-		// call the method.
+		// call the method, 利用反射的方式调用RPC方法.
 		function := method.Func
 		function.Call([]reflect.Value{svc.rcvr, args.Elem(), replyv})
 

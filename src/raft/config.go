@@ -30,9 +30,9 @@ type config struct {
 	mu        sync.Mutex
 	t         *testing.T
 	net       *labrpc.Network
-	n         int
-	done      int32 // tell internal threads to die
-	rafts     []*Raft
+	n         int      // server counts.
+	done      int32    // tell internal threads to die
+	rafts     []*Raft  // Raft的参与者列表
 	applyErr  []string // from apply channel readers
 	connected []bool   // whether each server is on the net
 	saved     []*Persister

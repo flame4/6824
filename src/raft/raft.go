@@ -15,7 +15,7 @@ package raft
 //   each time a new entry is committed to the log, each Raft peer
 //   should send an ApplyMsg to the service (or tester)
 //   in the same server.
-//
+//	 这个为了?
 
 import "sync"
 import "labrpc"
@@ -23,19 +23,18 @@ import "labrpc"
 // import "bytes"
 // import "encoding/gob"
 
-
-
-//
 // as each Raft peer becomes aware that successive log entries are
 // committed, the peer should send an ApplyMsg to the service (or
 // tester) on the same server, via the applyCh passed to Make().
-//
+// 对于一个service来说, 底层的RAFT对它是透明的, 它需要返回一个值来表示函数已经执行完了.
 type ApplyMsg struct {
 	Index       int
 	Command     interface{}
 	UseSnapshot bool   // ignore for lab2; only used in lab3
 	Snapshot    []byte // ignore for lab2; only used in lab3
 }
+
+type TermNumber uint64
 
 //
 // A Go object implementing a single Raft peer.
@@ -46,10 +45,10 @@ type Raft struct {
 	persister *Persister          // Object to hold this peer's persisted state
 	me        int                 // this peer's index into peers[]
 
-	// Your data here (2A, 2B, 2C).
-	// Look at the paper's Figure 2 for a description of what
-	// state a Raft server must maintain.
+	// 2A status
 
+	// 当前的term号
+	term TermNumber
 }
 
 // return currentTerm and whether this server
@@ -92,9 +91,6 @@ func (rf *Raft) readPersist(data []byte) {
 		return
 	}
 }
-
-
-
 
 //
 // example RequestVote RPC arguments structure.
@@ -153,7 +149,6 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 	return ok
 }
 
-
 //
 // the service using Raft (e.g. a k/v server) wants to start
 // agreement on the next command to be appended to Raft's log. if this
@@ -173,7 +168,6 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	isLeader := true
 
 	// Your code here (2B).
-
 
 	return index, term, isLeader
 }
@@ -210,7 +204,6 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 	// initialize from state persisted before a crash
 	rf.readPersist(persister.ReadRaftState())
-
 
 	return rf
 }
