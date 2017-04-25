@@ -17,8 +17,11 @@ package raft
 //   in the same server.
 //	 这个为了?
 
-import "sync"
-import "labrpc"
+import (
+	"labrpc"
+	"sync"
+	"time"
+)
 
 // import "bytes"
 // import "encoding/gob"
@@ -34,7 +37,15 @@ type ApplyMsg struct {
 	Snapshot    []byte // ignore for lab2; only used in lab3
 }
 
-type TermNumber uint64
+type TermNumberType int
+type RaftRule int
+type Counter time.Duration
+
+const (
+	Leader RaftRule = iota
+	Candidate
+	Follower
+)
 
 //
 // A Go object implementing a single Raft peer.
@@ -48,17 +59,19 @@ type Raft struct {
 	// 2A status
 
 	// 当前的term号
-	term TermNumber
+	term TermNumberType
+
+	// 当前的状态, leader, candidate, follower
+	status RaftRule
+
+	// 计数器, 上限.
+	counter Counter
 }
 
 // return currentTerm and whether this server
 // believes it is the leader.
 func (rf *Raft) GetState() (int, bool) {
-
-	var term int
-	var isleader bool
-	// Your code here (2A).
-	return term, isleader
+	return int(rf.term), (rf.status == Leader)
 }
 
 //
@@ -117,13 +130,17 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 
 //
 // example code to send a RequestVote RPC to a server.
+// 样例代码, 发送rpc给server.
 // server is the index of the target server in rf.peers[].
+// server 是 rf.peers[] 对应的索引, args存放rpc参数.
 // expects RPC arguments in args.
 // fills in *reply with RPC reply, so caller should
 // pass &reply.
+// 应该传&reply来避免copy.
 // the types of the args and reply passed to Call() must be
 // the same as the types of the arguments declared in the
 // handler function (including whether they are pointers).
+// 调用 Call() 函数的时候, 类型必须与声明一致, 包括是否是指针.
 //
 // The labrpc package simulates a lossy network, in which servers
 // may be unreachable, and in which requests and replies may be lost.
